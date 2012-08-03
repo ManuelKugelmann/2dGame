@@ -167,5 +167,7 @@ pip-log.txt
 Library
 Temp
 
+*.csproj
+*.pidb
 *.vcproject
 *.sln
