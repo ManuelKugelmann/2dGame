@@ -4,11 +4,11 @@ using System.Collections;
 public class BuildBlock : MonoBehaviour
 {
     private Vector3 offset;
-    public Transform activeDockingPoint;
-    public float searchRange = 5.0F;
+    private Transform activeDockingPoint;
+    public float searchRange = 2.0F;
     //Mousebuttons
-    private static int leftButton =0;
-    private static int rightButton =1;
+    private static int leftButton = 0;
+    private static int rightButton = 1;
     // Use this for initialization
     void Start()
     {
@@ -24,9 +24,9 @@ public class BuildBlock : MonoBehaviour
     public static Vector3 GetMousePositionAtNullPlane()
     {
         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-        float lambda = Mathf.Abs(ray.origin.z) / ray.direction.z;
+        float lambda = -ray.origin.z / ray.direction.z;
         Debug.DrawRay(ray.origin, ray.direction * lambda, Color.yellow);
-        return ray.direction * lambda;
+        return ray.origin + ray.direction * lambda;
     }
 
     void OnMouseDown()
@@ -34,8 +34,22 @@ public class BuildBlock : MonoBehaviour
         if (Input.GetMouseButton(leftButton))
         {
             Vector3 position = this.transform.position;
-            offset = position - GetMousePositionAtNullPlane();
-
+            var mousePosition = GetMousePositionAtNullPlane();
+            offset = position - mousePosition ;
+            Transform closest = null;
+            float minDistance = Mathf.Infinity;
+            foreach (Transform child in this.transform) 
+            {
+                if (child.gameObject.layer == LayerMask.NameToLayer("Docking Point"))
+                {
+                    Debug.Log(mousePosition + " " + child.position);
+                    if (CheckDistance(mousePosition, ref minDistance, child.position))
+                    {
+                        closest = child.transform;
+                    }
+                }
+            }
+            activeDockingPoint = closest;
         }
         if (Input.GetMouseButton(rightButton))
         {
@@ -60,7 +74,7 @@ public class BuildBlock : MonoBehaviour
     private Transform GetClosestDockingPoint()
     {
         Transform closestDockingPoint = null;
-        Collider[] colliders = Physics.OverlapSphere(activeDockingPoint.transform.position, searchRange, 1 << LayerMask.NameToLayer("Docking Point"));
+        Collider[] colliders = Physics.OverlapSphere(activeDockingPoint.position, searchRange, 1 << LayerMask.NameToLayer("Docking Point"));
         if (colliders.Length > 0)
         {
             float minDistance = Mathf.Infinity;
@@ -68,20 +82,31 @@ public class BuildBlock : MonoBehaviour
             {
                 if (c.transform.parent.gameObject != this.gameObject)
                 {
-                    float distance = Vector3.Distance(c.transform.position, activeDockingPoint.transform.position);
-                    if (distance < minDistance)
+                    if(CheckDistance(activeDockingPoint.position,ref minDistance, c.transform.position))
                     {
                         closestDockingPoint = c.transform;
-                        minDistance = distance;
                     }
                 }
             }
             if (closestDockingPoint != null)
             {
-                Debug.DrawLine(activeDockingPoint.transform.position, closestDockingPoint.position);
+                Debug.DrawLine(activeDockingPoint.position, closestDockingPoint.position);
             }
         }
         return closestDockingPoint;
+    }
+
+    private bool CheckDistance(Vector3 start, ref float minDistance, Vector3 end)
+    {
+
+        float distance = Vector3.Distance(start, end);
+        Debug.Log("previous Distance " + minDistance + " new distance " + distance + " bool " + (distance < minDistance));
+        if (distance < minDistance)
+        {
+            minDistance = distance;
+            return true;
+        }
+        return false;
     }
 
     void OnMouseUp()
@@ -89,12 +114,16 @@ public class BuildBlock : MonoBehaviour
         if (rigidbody != null)
         {
             rigidbody.constraints = RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezePositionZ;
+            
         }
     }
 
     void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.yellow;
-        Gizmos.DrawWireSphere(activeDockingPoint.transform.position, searchRange);
+        if (activeDockingPoint != null)
+        {
+            Gizmos.DrawWireSphere(activeDockingPoint.position, searchRange);
+        }
     }
 }
