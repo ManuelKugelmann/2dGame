@@ -167,7 +167,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 715686258}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 614d5079e6f367340990858807fe0021, type: 1}
+  m_Script: {fileID: 11500000, guid: 3afa500389801314f97e6cd20bc97678, type: 1}
   m_Name: 
   activeDockingPoint: {fileID: 1039335984}
   searchRange: 5
