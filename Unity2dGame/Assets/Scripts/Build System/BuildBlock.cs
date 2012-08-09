@@ -1,15 +1,18 @@
 using UnityEngine;
 using System.Collections;
 
-public class BuildBlock : MonoBehaviour {
-
+public class BuildBlock : MonoBehaviour 
+{
+    private Vector3 offset;
 	// Use this for initialization
-	void Start () {
+	void Start () 
+    {
 	
 	}
 	
 	// Update is called once per frame
-	void Update () {
+	void Update () 
+    {
 	
 	}
 
@@ -21,8 +24,22 @@ public class BuildBlock : MonoBehaviour {
 		return ray.direction * lambda;
 	}
 	
-	void OnMouseDown () {
+	void OnMouseDown () 
+    {
 		Vector3 position = this.transform.position;
-		Vector3 atNullPlane = GetMousePositionAtNullPlane ();
+        offset = position - GetMousePositionAtNullPlane ();
+        
 	}
+
+    void OnMouseDrag()
+    {
+        this.transform.position = GetMousePositionAtNullPlane()+ offset;
+        rigidbody.constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionZ;
+       
+    }
+
+    void OnMouseUp()
+    {
+        rigidbody.constraints = RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezePositionZ;
+    }
 }
