@@ -5,6 +5,9 @@ public class BuildBlock : MonoBehaviour
 {
     private Vector3 offset;
     private Transform activeDockingPoint;
+    private ArrayList dockingPoints;
+    private bool leftMouseDown = false;
+    private int currentActive = 0;
     public float searchRange = 2.0F;
     //Mousebuttons
     private static int leftButton = 0;
@@ -12,48 +15,65 @@ public class BuildBlock : MonoBehaviour
     // Use this for initialization
     void Start()
     {
-       
+        dockingPoints = new ArrayList();
     }
 
     // Update is called once per frame
     void Update()
     {
-
+        if (Input.GetMouseButtonDown(rightButton) && dockingPoints.Count >0 && leftMouseDown)
+        {
+            Debug.Log("Righclick");
+            currentActive += 1;
+            if (currentActive >= dockingPoints.Count)
+            {
+                currentActive = 0;
+            }
+            activeDockingPoint = (Transform)dockingPoints[currentActive];
+            var mousePosition = GetMousePositionAtNullPlane();
+            this.transform.position = this.transform.position + (mousePosition - activeDockingPoint.position);
+            offset = this.transform.position - mousePosition;
+        }
     }
 
     public static Vector3 GetMousePositionAtNullPlane()
     {
         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
         float lambda = -ray.origin.z / ray.direction.z;
-        Debug.DrawRay(ray.origin, ray.direction * lambda, Color.yellow);
+        Debug.DrawRay(ray.origin, ray.origin + ray.direction * lambda, Color.yellow);
         return ray.origin + ray.direction * lambda;
     }
 
     void OnMouseDown()
     {
+        Transform closest = null;
+        
         if (Input.GetMouseButton(leftButton))
         {
-            Vector3 position = this.transform.position;
+            leftMouseDown = true;
             var mousePosition = GetMousePositionAtNullPlane();
-            offset = position - mousePosition ;
-            Transform closest = null;
+
             float minDistance = Mathf.Infinity;
-            foreach (Transform child in this.transform) 
+            foreach (Transform child in this.transform)
             {
                 if (child.gameObject.layer == LayerMask.NameToLayer("Docking Point"))
                 {
-                    Debug.Log(mousePosition + " " + child.position);
+                    dockingPoints.Add(child);
                     if (CheckDistance(mousePosition, ref minDistance, child.position))
                     {
-                        closest = child.transform;
+                        closest = child;
                     }
                 }
             }
             activeDockingPoint = closest;
+            currentActive = dockingPoints.IndexOf(activeDockingPoint);
+            this.transform.position = this.transform.position + (mousePosition - activeDockingPoint.position);
+            offset = this.transform.position - mousePosition;
         }
-        if (Input.GetMouseButton(rightButton))
+        if (Input.GetMouseButton(rightButton) && dockingPoints != null)
         {
-            //TODO switch activeDockingPoint
+            
+
         }
 
     }
@@ -82,7 +102,7 @@ public class BuildBlock : MonoBehaviour
             {
                 if (c.transform.parent.gameObject != this.gameObject)
                 {
-                    if(CheckDistance(activeDockingPoint.position,ref minDistance, c.transform.position))
+                    if (CheckDistance(activeDockingPoint.position, ref minDistance, c.transform.position))
                     {
                         closestDockingPoint = c.transform;
                     }
@@ -98,9 +118,7 @@ public class BuildBlock : MonoBehaviour
 
     private bool CheckDistance(Vector3 start, ref float minDistance, Vector3 end)
     {
-
         float distance = Vector3.Distance(start, end);
-        Debug.Log("previous Distance " + minDistance + " new distance " + distance + " bool " + (distance < minDistance));
         if (distance < minDistance)
         {
             minDistance = distance;
@@ -111,10 +129,13 @@ public class BuildBlock : MonoBehaviour
 
     void OnMouseUp()
     {
+        leftMouseDown = false;
         if (rigidbody != null)
         {
-            rigidbody.constraints = RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezePositionZ;
             
+            
+            rigidbody.constraints = RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezePositionZ;
+
         }
     }
 
