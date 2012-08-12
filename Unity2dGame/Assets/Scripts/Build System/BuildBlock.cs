@@ -40,7 +40,7 @@ public class BuildBlock : MonoBehaviour
     {
         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
         float lambda = -ray.origin.z / ray.direction.z;
-        Debug.DrawRay(ray.origin, ray.origin + ray.direction * lambda, Color.yellow);
+        Debug.DrawRay(ray.origin, ray.direction * lambda, Color.yellow);
         return ray.origin + ray.direction * lambda;
     }
 
