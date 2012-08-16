@@ -10,10 +10,35 @@ public class BuildBlock : MonoBehaviour
 	private Shader ghostShader;
 	private Shader normalShader;
 	private Vector3 offset;
-	private Transform activeDockingPoint;
+	
+	private Transform backingfield_activeDockingPoint;
+	private Transform activeDockingPoint
+	{
+		get
+		{
+			return backingfield_activeDockingPoint;
+		}
+		
+		set
+		{
+			if(backingfield_activeDockingPoint != null)
+			{
+				backingfield_activeDockingPoint.gameObject.renderer.material.color = Color.red; // inactive
+			}
+			
+			backingfield_activeDockingPoint = value;
+			
+			if(backingfield_activeDockingPoint != null)
+			{
+				backingfield_activeDockingPoint.gameObject.renderer.material.color = Color.yellow; // active
+			}
+		}
+	}
+	
+	
 	private ArrayList dockingPoints;
-	private bool leftMouseDown = false;
-	private int currentActive = 0;
+	
+	private int activeDockingPointIdx = 0;
 	
 	//Mousebuttons
 	private static int leftButton = 0;
@@ -26,23 +51,45 @@ public class BuildBlock : MonoBehaviour
 		ghostShader = Shader.Find("Transparent/Diffuse");
 		normalShader = this.gameObject.renderer.material.shader;
 	}
-
+	
+	
+	
+	
 	// Update is called once per frame
 	void Update ()
 	{
-		if (leftMouseDown && Input.GetMouseButtonDown (rightButton) && dockingPoints.Count > 0) {
-			currentActive += 1;
-			if (currentActive >= dockingPoints.Count) {
-				currentActive = 0;
-			}
-			activeDockingPoint = (Transform)dockingPoints [currentActive];
+		
+		// Lock y rotation
+		// TODO: look for something more efficient
+		//var r = this.transform.rotation.eulerAngles;
+		//r.y = 0;
+		//this.transform.rotation = Quaternion.Euler(r);
+		
+		if (isBuildingBlockDragMode)
+		{
 			var mousePosition = GetMousePositionAtNullPlane ();
-			RotateToTargetPoint(mousePosition);
-			this.transform.position = this.transform.position + (mousePosition - activeDockingPoint.position);
-			offset = this.transform.position - mousePosition;
+			
+			if(Input.GetMouseButtonDown (rightButton) && dockingPoints.Count > 0) {
+				activeDockingPointIdx += 1;
+				if (activeDockingPointIdx >= dockingPoints.Count) {
+					activeDockingPointIdx = 0;
+				}
+				activeDockingPoint = (Transform)dockingPoints [activeDockingPointIdx];
+				RotateToTargetPoint(mousePosition);
+				this.transform.position = this.transform.position + (mousePosition - activeDockingPoint.position);
+				offset = this.transform.position - mousePosition;
+			}
+			
+		
+			if(closestDockingPoint != null)
+			{
+				RotateToTargetPoint(closestDockingPoint.position);
+		
+			}
 		}
 	}
-
+	
+	
 	public static Vector3 GetMousePositionAtNullPlane ()
 	{
 		Ray ray = Camera.main.ScreenPointToRay (Input.mousePosition);
@@ -50,12 +97,15 @@ public class BuildBlock : MonoBehaviour
 		Debug.DrawRay (ray.origin, ray.direction * lambda, Color.yellow);
 		return ray.origin + ray.direction * lambda;
 	}
-
+	
+	
+	bool isBuildingBlockDragMode;
+	
 	void OnMouseDown ()
 	{
 		Ghost();
 		Transform closest = null;
-		leftMouseDown = true;
+		
 		var mousePosition = GetMousePositionAtNullPlane ();
 
 		float minDistance = Mathf.Infinity;
@@ -68,42 +118,65 @@ public class BuildBlock : MonoBehaviour
 			}
 		}
 		activeDockingPoint = closest;
-		currentActive = dockingPoints.IndexOf (activeDockingPoint);
-		this.transform.position = this.transform.position + (mousePosition - activeDockingPoint.position);
+		
+		activeDockingPointIdx = dockingPoints.IndexOf (activeDockingPoint);
+		
+		//this.transform.position = this.transform.position + (mousePosition - activeDockingPoint.position);
+		
 		offset = this.transform.position - mousePosition;
-        
+    
+		isBuildingBlockDragMode = true;
 	}
-
+	
+	
+	Transform closestDockingPoint;
+	
 	void OnMouseDrag ()
 	{      
 		if (rigidbody != null) {
 			rigidbody.constraints = RigidbodyConstraints.FreezeAll;
 		}
 		Vector3 mousePosition = GetMousePositionAtNullPlane ();
-		this.transform.position = mousePosition+ offset;
 		
-		Transform closestDockingPoint = GetClosestDockingPoint (); 
-		if(closestDockingPoint != null)
-		{
-			RotateToTargetPoint(closestDockingPoint.position);
-		}
+		//offset -= offset*Time.deltaTime; //slide to center
+		
+		var move = mousePosition+offset - this.transform.position;
+
+		this.transform.position += move * Time.deltaTime*10;
+	
+		
+		closestDockingPoint = GetClosestDockingPoint (); 
+	
 	}
 
+	
 	void OnMouseUp ()
 	{
 		UnGhost();
-		leftMouseDown = false;
 		if (rigidbody != null) {
 			rigidbody.constraints = RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezePositionZ;
 		}
+		
+		isBuildingBlockDragMode = false;
 	}
 
+	
 	void OnDrawGizmosSelected ()
 	{
 		Gizmos.color = Color.yellow;
 		if (activeDockingPoint != null) {
 			Gizmos.DrawWireSphere (activeDockingPoint.position, searchRange);
 		}
+	}
+	
+	 void OnTriggerEnter ()
+	{
+		this.gameObject.renderer.material.color=Color.red;	
+	}
+	
+	void OnTriggerExit ()
+	{
+		this.gameObject.renderer.material.color = Color.white;	
 	}
 
 	private void Ghost ()
@@ -114,6 +187,7 @@ public class BuildBlock : MonoBehaviour
 		newColor.a = 0.5F;
 		this.gameObject.renderer.material.color = newColor;
 	}
+	
 	
 	private void UnGhost ()
 	{
@@ -136,11 +210,45 @@ public class BuildBlock : MonoBehaviour
 	
 	private void RotateToTargetPoint(Vector3 targetPoint)
 	{
-		Vector3	activeDockingPointDir = Vector3.Normalize(-this.transform.position + activeDockingPoint.position);
-		Vector3 targetPointDir = Vector3.Normalize(-this.transform.position + targetPoint);
-		float angle = signedAngle(activeDockingPointDir,targetPointDir);
-		this.transform.rotation *= Quaternion.AngleAxis(angle,Vector3.forward);
+			
+		Vector3 activeDockingPointRelativePosition = -this.transform.position + activeDockingPoint.position; // NOTE: could use local position if docking points are always direct children
+		
+		float angle = 0;
+		
+		if((targetPoint-activeDockingPoint.position).magnitude > 0.01f)
+		{
+			Vector3	activeDockingPointDir = Vector3.Normalize(activeDockingPointRelativePosition);
+			Vector3 targetPointDir = Vector3.Normalize(-this.transform.position + targetPoint);
+			angle = signedAngle(activeDockingPointDir,targetPointDir);
+		}
+		
+
+		var finalRotationMove = Quaternion.AngleAxis(angle,Vector3.forward);
+		
+		var finalActiveDockingPointRelativePosition = finalRotationMove*activeDockingPointRelativePosition;
+		var finalActiveDockingPointPosition = this.transform.position +finalActiveDockingPointRelativePosition;
+		
+		var finalPositionMove = targetPoint - finalActiveDockingPointPosition;
+		
+		var stepRotation = Quaternion.AngleAxis(angle*Time.deltaTime*20,Vector3.forward);
+		var stepPosition = finalPositionMove*Time.deltaTime*20;
+		
+		
+		this.transform.rotation *= stepRotation;
+		this.transform.position += stepPosition;
+		
+		//offset = stepRotation * offset;
+		//offset += stepPosition;
+		
+		/*
+		//this.transform.RotateAround(targetPoint,Vector3.forward,angle);// target point
+		//this.transform.RotateAround(activeDockingPoint.position,Vector3.forward,angle);// own docking point
+		
+		this.transform.rotation *= finalRotationMove;
+		this.transform.position = finalPosition;
+		*/
 	}
+	
 	
 	private Transform GetClosestDockingPoint ()
 	{
@@ -161,7 +269,8 @@ public class BuildBlock : MonoBehaviour
 		}
 		return closestDockingPoint;
 	}
-
+	
+	
 	private bool CheckDistance (Vector3 start, ref float minDistance, Vector3 end)
 	{
 		float distance = Vector3.Distance (start, end);
@@ -171,4 +280,5 @@ public class BuildBlock : MonoBehaviour
 		}
 		return false;
 	}
+	
 }
