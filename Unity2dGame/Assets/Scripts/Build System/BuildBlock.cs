@@ -5,12 +5,36 @@ public class BuildBlock : MonoBehaviour
 {
 	//Public
 	public float searchRange = 2.0F;
+    public float mousePullStrength = 10F;
+    public float dockingPointPullStrength = 20F;
+    public float alpha = 0.7F;
 	
 	//private
 	private Shader ghostShader;
 	private Shader normalShader;
 	private Vector3 offset;
-	
+    private Vector3 closestDockingPointVelocity = Vector3.zero;
+    private Vector3 mousePointVelocity = Vector3.zero;
+    private bool isBuildingBlockDragMode;
+    private Transform backingfield_closestDockingPoint;
+    private Transform closestDockingPoint
+    {
+        get
+        {
+            return backingfield_closestDockingPoint;
+        }
+
+        set
+        {
+            if (backingfield_closestDockingPoint != value)
+            {           
+                backingfield_closestDockingPoint = value;
+                closestDockingPointVelocity = Vector3.zero;
+            }
+ 
+        }
+    }
+    
 	private Transform backingfield_activeDockingPoint;
 	private Transform activeDockingPoint
 	{
@@ -51,10 +75,7 @@ public class BuildBlock : MonoBehaviour
 		ghostShader = Shader.Find("Transparent/Diffuse");
 		normalShader = this.gameObject.renderer.material.shader;
 	}
-	
-	
-	
-	
+
 	// Update is called once per frame
 	void Update ()
 	{
@@ -69,26 +90,22 @@ public class BuildBlock : MonoBehaviour
 		{
 			var mousePosition = GetMousePositionAtNullPlane ();
 			
-			if(Input.GetMouseButtonDown (rightButton) && dockingPoints.Count > 0) {
+			if(Input.GetMouseButtonDown (rightButton) && dockingPoints.Count > 0) { // when righclicked
 				activeDockingPointIdx += 1;
 				if (activeDockingPointIdx >= dockingPoints.Count) {
 					activeDockingPointIdx = 0;
 				}
 				activeDockingPoint = (Transform)dockingPoints [activeDockingPointIdx];
-				RotateToTargetPoint(mousePosition);
+				RotateToTargetPoint(mousePosition, ref mousePointVelocity);
 				this.transform.position = this.transform.position + (mousePosition - activeDockingPoint.position);
 				offset = this.transform.position - mousePosition;
 			}
-			
-		
 			if(closestDockingPoint != null)
 			{
-				RotateToTargetPoint(closestDockingPoint.position);
-		
+				RotateToTargetPoint(closestDockingPoint.position, ref closestDockingPointVelocity);
 			}
 		}
 	}
-	
 	
 	public static Vector3 GetMousePositionAtNullPlane ()
 	{
@@ -97,17 +114,12 @@ public class BuildBlock : MonoBehaviour
 		Debug.DrawRay (ray.origin, ray.direction * lambda, Color.yellow);
 		return ray.origin + ray.direction * lambda;
 	}
-	
-	
-	bool isBuildingBlockDragMode;
-	
+
 	void OnMouseDown ()
 	{
 		Ghost();
 		Transform closest = null;
-		
 		var mousePosition = GetMousePositionAtNullPlane ();
-
 		float minDistance = Mathf.Infinity;
 		foreach (Transform child in this.transform) {
 			if (child.gameObject.layer == LayerMask.NameToLayer ("Docking Point")) {
@@ -118,18 +130,11 @@ public class BuildBlock : MonoBehaviour
 			}
 		}
 		activeDockingPoint = closest;
-		
 		activeDockingPointIdx = dockingPoints.IndexOf (activeDockingPoint);
-		
 		//this.transform.position = this.transform.position + (mousePosition - activeDockingPoint.position);
-		
 		offset = this.transform.position - mousePosition;
-    
-		isBuildingBlockDragMode = true;
+    	isBuildingBlockDragMode = true;
 	}
-	
-	
-	Transform closestDockingPoint;
 	
 	void OnMouseDrag ()
 	{      
@@ -139,28 +144,26 @@ public class BuildBlock : MonoBehaviour
 		Vector3 mousePosition = GetMousePositionAtNullPlane ();
 		
 		//offset -= offset*Time.deltaTime; //slide to center
-		
+		// pull towards mousePointer
 		var move = mousePosition+offset - this.transform.position;
 
-		this.transform.position += move * Time.deltaTime*10;
+		this.transform.position += move * Time.deltaTime*mousePullStrength;
 	
 		
 		closestDockingPoint = GetClosestDockingPoint (); 
 	
 	}
 
-	
 	void OnMouseUp ()
 	{
 		UnGhost();
 		if (rigidbody != null) {
 			rigidbody.constraints = RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezePositionZ;
 		}
-		
+        activeDockingPoint = null;
 		isBuildingBlockDragMode = false;
 	}
 
-	
 	void OnDrawGizmosSelected ()
 	{
 		Gizmos.color = Color.yellow;
@@ -171,12 +174,16 @@ public class BuildBlock : MonoBehaviour
 	
 	 void OnTriggerEnter ()
 	{
-		this.gameObject.renderer.material.color=Color.red;	
+        var redColor = Color.red;
+        redColor.a = alpha;
+		this.gameObject.renderer.material.color=redColor;	
 	}
 	
 	void OnTriggerExit ()
 	{
-		this.gameObject.renderer.material.color = Color.white;	
+        var whiteColor = Color.white;
+        whiteColor.a = alpha;
+		this.gameObject.renderer.material.color = whiteColor;	
 	}
 
 	private void Ghost ()
@@ -184,20 +191,16 @@ public class BuildBlock : MonoBehaviour
 		this.gameObject.collider.isTrigger = true;
 		this.gameObject.renderer.material.shader = ghostShader;
 		Color newColor = this.gameObject.renderer.material.color;
-		newColor.a = 0.5F;
+		newColor.a = alpha;
 		this.gameObject.renderer.material.color = newColor;
 	}
-	
 	
 	private void UnGhost ()
 	{
 		this.gameObject.collider.isTrigger = false;
-		Color newColor = this.gameObject.renderer.material.color;
-		newColor.a = 1;
-		this.gameObject.renderer.material.color = newColor;
-		this.gameObject.renderer.material.shader = normalShader;
+		this.gameObject.renderer.material.shader = normalShader ;
+        this.gameObject.renderer.material.color = normalColor ;
 	}
-	
 	
 	protected float signedAngle(Vector2 v1, Vector2 v2)
 	{
@@ -208,34 +211,30 @@ public class BuildBlock : MonoBehaviour
 	}
 		
 	
-	private void RotateToTargetPoint(Vector3 targetPoint)
+	private void RotateToTargetPoint(Vector3 targetPoint, ref Vector3 velocity)
 	{
-			
 		Vector3 activeDockingPointRelativePosition = -this.transform.position + activeDockingPoint.position; // NOTE: could use local position if docking points are always direct children
-		
 		float angle = 0;
-		
 		if((targetPoint-activeDockingPoint.position).magnitude > 0.01f)
 		{
 			Vector3	activeDockingPointDir = Vector3.Normalize(activeDockingPointRelativePosition);
 			Vector3 targetPointDir = Vector3.Normalize(-this.transform.position + targetPoint);
 			angle = signedAngle(activeDockingPointDir,targetPointDir);
 		}
-		
-
 		var finalRotationMove = Quaternion.AngleAxis(angle,Vector3.forward);
 		
-		var finalActiveDockingPointRelativePosition = finalRotationMove*activeDockingPointRelativePosition;
-		var finalActiveDockingPointPosition = this.transform.position +finalActiveDockingPointRelativePosition;
+		var finalActiveDockingPointRelativePosition = finalRotationMove*activeDockingPointRelativePosition; //rotate relativeVector
+		var finalActiveDockingPointPosition = this.transform.position +finalActiveDockingPointRelativePosition; // final Position
 		
 		var finalPositionMove = targetPoint - finalActiveDockingPointPosition;
-		
-		var stepRotation = Quaternion.AngleAxis(angle*Time.deltaTime*20,Vector3.forward);
-		var stepPosition = finalPositionMove*Time.deltaTime*20;
+        
+		var stepRotation = Quaternion.AngleAxis(angle*Time.deltaTime*dockingPointPullStrength,Vector3.forward);
+		var stepPosition = finalPositionMove*Time.deltaTime*dockingPointPullStrength;
 		
 		
 		this.transform.rotation *= stepRotation;
-		this.transform.position += stepPosition;
+        this.transform.position += stepPosition; 
+        //this.transform.position = Vector3.SmoothDamp(this.transform.position, targetPoint,ref velocity,0.5F);
 		
 		//offset = stepRotation * offset;
 		//offset += stepPosition;
