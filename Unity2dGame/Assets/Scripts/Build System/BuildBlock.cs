@@ -12,6 +12,7 @@ public class BuildBlock : MonoBehaviour
 	//private
 	private Shader ghostShader;
 	private Shader normalShader;
+    private Color normalColor;
 	private Vector3 offset;
     private Vector3 closestDockingPointVelocity = Vector3.zero;
     private Vector3 mousePointVelocity = Vector3.zero;
@@ -26,12 +27,19 @@ public class BuildBlock : MonoBehaviour
 
         set
         {
+            if (backingfield_closestDockingPoint != null)
+            {
+                backingfield_closestDockingPoint.gameObject.renderer.material.color = Color.red; // inactive
+            }
             if (backingfield_closestDockingPoint != value)
-            {           
+            {
                 backingfield_closestDockingPoint = value;
                 closestDockingPointVelocity = Vector3.zero;
             }
- 
+            if (backingfield_closestDockingPoint != null)
+            {
+                backingfield_closestDockingPoint.gameObject.renderer.material.color = Color.yellow; // active
+            }
         }
     }
     
@@ -74,6 +82,7 @@ public class BuildBlock : MonoBehaviour
 		dockingPoints = new ArrayList ();
 		ghostShader = Shader.Find("Transparent/Diffuse");
 		normalShader = this.gameObject.renderer.material.shader;
+        normalColor = this.gameObject.renderer.material.color;
 	}
 
 	// Update is called once per frame
