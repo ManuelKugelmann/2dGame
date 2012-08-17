@@ -17,6 +17,7 @@ public class BuildBlock : MonoBehaviour
     private Vector3 closestDockingPointVelocity = Vector3.zero;
     private Vector3 mousePointVelocity = Vector3.zero;
     private bool isBuildingBlockDragMode;
+    private bool isBuildingBlockPositioningMode;
     private Transform backingfield_closestDockingPoint;
     private Transform closestDockingPoint
     {
@@ -175,10 +176,14 @@ public class BuildBlock : MonoBehaviour
 
 	void OnDrawGizmosSelected ()
 	{
-		Gizmos.color = Color.yellow;
-		if (activeDockingPoint != null) {
-			Gizmos.DrawWireSphere (activeDockingPoint.position, searchRange);
-		}
+        if (isBuildingBlockDragMode)
+        {
+            Gizmos.color = Color.yellow;
+            if (activeDockingPoint != null)
+            {
+                Gizmos.DrawWireSphere(activeDockingPoint.position, searchRange);
+            }
+        }
 	}
 	
 	 void OnTriggerEnter ()
