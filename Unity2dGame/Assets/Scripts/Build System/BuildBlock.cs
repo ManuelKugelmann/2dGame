@@ -17,7 +17,6 @@ public class BuildBlock : MonoBehaviour
     private Vector3 closestDockingPointVelocity = Vector3.zero;
     private Vector3 mousePointVelocity = Vector3.zero;
     private bool isBuildingBlockDragMode;
-    private bool isBuildingBlockPositioningMode;
     private Transform backingfield_closestDockingPoint;
     private Transform closestDockingPoint
     {
