@@ -237,12 +237,17 @@ public class BuildBlock : MonoBehaviour
 		
 		var finalPositionMove = targetPoint - finalActiveDockingPointPosition;
         
+		this.transform.rotation *= Quaternion.AngleAxis(angle,Vector3.forward);
+        this.transform.position += finalPositionMove; 
+	
+		/*
 		var stepRotation = Quaternion.AngleAxis(angle*Time.deltaTime*dockingPointPullStrength,Vector3.forward);
 		var stepPosition = finalPositionMove*Time.deltaTime*dockingPointPullStrength;
 		
 		
 		this.transform.rotation *= stepRotation;
         this.transform.position += stepPosition; 
+        */
         //this.transform.position = Vector3.SmoothDamp(this.transform.position, targetPoint,ref velocity,0.5F);
 		
 		//offset = stepRotation * offset;
