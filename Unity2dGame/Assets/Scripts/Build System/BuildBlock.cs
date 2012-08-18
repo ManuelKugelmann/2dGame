@@ -175,10 +175,14 @@ public class BuildBlock : MonoBehaviour
 
 	void OnDrawGizmosSelected ()
 	{
-		Gizmos.color = Color.yellow;
-		if (activeDockingPoint != null) {
-			Gizmos.DrawWireSphere (activeDockingPoint.position, searchRange);
-		}
+        if (isBuildingBlockDragMode)
+        {
+            Gizmos.color = Color.yellow;
+            if (activeDockingPoint != null)
+            {
+                Gizmos.DrawWireSphere(activeDockingPoint.position, searchRange);
+            }
+        }
 	}
 	
 	 void OnTriggerEnter ()
