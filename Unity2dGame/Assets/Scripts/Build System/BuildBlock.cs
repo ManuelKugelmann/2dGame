@@ -141,11 +141,12 @@ public class BuildBlock : MonoBehaviour
 				var finalPositionMove = targetPoint - finalActiveDockingPointPosition;
 		        
 				this.transform.rotation *= Quaternion.AngleAxis(angle,Vector3.forward);
-		        this.transform.position += finalPositionMove; 
-						
+		        this.transform.position += finalPositionMove;
+
+              
+                this.transform.position = this.transform.position + (mousePosition - activeDockingPoint.position);
 				
-				
-				//RotateToTargetPoint(closestDockingPoint.position, ref closestDockingPointVelocity);
+                //RotateToTargetPoint(closestDockingPoint.position, ref closestDockingPointVelocity);
 			}
 		}
 	}
@@ -171,28 +172,29 @@ public class BuildBlock : MonoBehaviour
 		var finalPositionMove = targetPoint - finalActiveDockingPointPosition;
         
 		this.transform.rotation *= Quaternion.AngleAxis(angle,Vector3.forward);
-        this.transform.position += finalPositionMove; 
-	
-		/*
-		var stepRotation = Quaternion.AngleAxis(angle*Time.deltaTime*dockingPointPullStrength,Vector3.forward);
-		var stepPosition = finalPositionMove*Time.deltaTime*dockingPointPullStrength;
-		
-		
-		this.transform.rotation *= stepRotation;
-        this.transform.position += stepPosition; 
-        */
+        this.transform.position += finalPositionMove;
+
+        /*
+        var stepRotation = Quaternion.AngleAxis(angle * Time.deltaTime * dockingPointPullStrength, Vector3.forward);
+        var stepPosition = finalPositionMove * Time.deltaTime * dockingPointPullStrength;
+
+
+        this.transform.rotation *= stepRotation;
+        this.transform.position += stepPosition;
+
         //this.transform.position = Vector3.SmoothDamp(this.transform.position, targetPoint,ref velocity,0.5F);
+
+        //offset = stepRotation * offset;
+        //offset += stepPosition;
+
+
+        //this.transform.RotateAround(targetPoint,Vector3.forward,angle);// target point
+        //this.transform.RotateAround(activeDockingPoint.position,Vector3.forward,angle);// own docking point
+
+        this.transform.rotation *= finalRotationMove;
+        this.transform.position = finalPositionMove;
+        */
 		
-		//offset = stepRotation * offset;
-		//offset += stepPosition;
-		
-		/*
-		//this.transform.RotateAround(targetPoint,Vector3.forward,angle);// target point
-		//this.transform.RotateAround(activeDockingPoint.position,Vector3.forward,angle);// own docking point
-		
-		this.transform.rotation *= finalRotationMove;
-		this.transform.position = finalPosition;
-		*/
 	}
 	
 	
@@ -217,6 +219,7 @@ public class BuildBlock : MonoBehaviour
 		
 		Transform closest = null;
 		float minDistance = Mathf.Infinity;
+        // get all Dockingpoints on this object
 		foreach (Transform child in this.transform) {
 			if (child.gameObject.layer == LayerMask.NameToLayer ("Docking Point")) {
 				dockingPoints.Add (child);
@@ -259,11 +262,7 @@ public class BuildBlock : MonoBehaviour
 	void OnMouseUp ()
 	{
 		UnGhost();
-		
-		if (rigidbody != null) {
-			rigidbody.constraints = RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezePositionZ;
-		}
-		
+        Destroy(this.rigidbody);
         activeDockingPoint = null;
 		isBuildingBlockDragMode = false;
 		
