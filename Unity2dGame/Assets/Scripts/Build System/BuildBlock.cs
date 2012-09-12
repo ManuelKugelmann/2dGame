@@ -88,33 +88,114 @@ public class BuildBlock : MonoBehaviour
 	// Update is called once per frame
 	void Update ()
 	{
-		
 		// Lock y rotation
 		// TODO: look for something more efficient
 		//var r = this.transform.rotation.eulerAngles;
 		//r.y = 0;
 		//this.transform.rotation = Quaternion.Euler(r);
 		
-		if (isBuildingBlockDragMode)
-		{
+		if (isBuildingBlockDragMode) {
+
 			var mousePosition = GetMousePositionAtNullPlane ();
 			
+			/*
 			if(Input.GetMouseButtonDown (rightButton) && dockingPoints.Count > 0) { // when righclicked
+				
 				activeDockingPointIdx += 1;
 				if (activeDockingPointIdx >= dockingPoints.Count) {
 					activeDockingPointIdx = 0;
 				}
+				
 				activeDockingPoint = (Transform)dockingPoints [activeDockingPointIdx];
 				RotateToTargetPoint(mousePosition, ref mousePointVelocity);
 				this.transform.position = this.transform.position + (mousePosition - activeDockingPoint.position);
 				offset = this.transform.position - mousePosition;
 			}
-			if(closestDockingPoint != null)
-			{
-				RotateToTargetPoint(closestDockingPoint.position, ref closestDockingPointVelocity);
+			*/
+					
+			closestDockingPoint = GetClosestDockingPoint ();
+			
+			if(closestDockingPoint == null) {
+				
+				this.transform.position = this.transform.position + (mousePosition + offset - activeDockingPoint.position);
+				
+			}
+			else {
+				
+				var targetPoint = closestDockingPoint.position;
+				
+						
+				Vector3 activeDockingPointRelativePosition = -this.transform.position + activeDockingPoint.position; // NOTE: could use local position if docking points are always direct children
+				float angle = 0;
+				if((targetPoint-activeDockingPoint.position).magnitude > 0.01f)
+				{
+					Vector3	activeDockingPointDir = Vector3.Normalize(activeDockingPointRelativePosition);
+					Vector3 targetPointDir = Vector3.Normalize(-this.transform.position + targetPoint);
+					angle = signedAngle(activeDockingPointDir,targetPointDir);
+				}
+				var finalRotationMove = Quaternion.AngleAxis(angle,Vector3.forward);
+				
+				var finalActiveDockingPointRelativePosition = finalRotationMove*activeDockingPointRelativePosition; //rotate relativeVector
+				var finalActiveDockingPointPosition = this.transform.position +finalActiveDockingPointRelativePosition; // final Position
+				
+				var finalPositionMove = targetPoint - finalActiveDockingPointPosition;
+		        
+				this.transform.rotation *= Quaternion.AngleAxis(angle,Vector3.forward);
+		        this.transform.position += finalPositionMove; 
+						
+				
+				
+				//RotateToTargetPoint(closestDockingPoint.position, ref closestDockingPointVelocity);
 			}
 		}
 	}
+	
+	
+	
+	private void RotateToTargetPoint(Vector3 targetPoint, ref Vector3 velocity)
+	{
+		
+		Vector3 activeDockingPointRelativePosition = -this.transform.position + activeDockingPoint.position; // NOTE: could use local position if docking points are always direct children
+		float angle = 0;
+		if((targetPoint-activeDockingPoint.position).magnitude > 0.01f)
+		{
+			Vector3	activeDockingPointDir = Vector3.Normalize(activeDockingPointRelativePosition);
+			Vector3 targetPointDir = Vector3.Normalize(-this.transform.position + targetPoint);
+			angle = signedAngle(activeDockingPointDir,targetPointDir);
+		}
+		var finalRotationMove = Quaternion.AngleAxis(angle,Vector3.forward);
+		
+		var finalActiveDockingPointRelativePosition = finalRotationMove*activeDockingPointRelativePosition; //rotate relativeVector
+		var finalActiveDockingPointPosition = this.transform.position +finalActiveDockingPointRelativePosition; // final Position
+		
+		var finalPositionMove = targetPoint - finalActiveDockingPointPosition;
+        
+		this.transform.rotation *= Quaternion.AngleAxis(angle,Vector3.forward);
+        this.transform.position += finalPositionMove; 
+	
+		/*
+		var stepRotation = Quaternion.AngleAxis(angle*Time.deltaTime*dockingPointPullStrength,Vector3.forward);
+		var stepPosition = finalPositionMove*Time.deltaTime*dockingPointPullStrength;
+		
+		
+		this.transform.rotation *= stepRotation;
+        this.transform.position += stepPosition; 
+        */
+        //this.transform.position = Vector3.SmoothDamp(this.transform.position, targetPoint,ref velocity,0.5F);
+		
+		//offset = stepRotation * offset;
+		//offset += stepPosition;
+		
+		/*
+		//this.transform.RotateAround(targetPoint,Vector3.forward,angle);// target point
+		//this.transform.RotateAround(activeDockingPoint.position,Vector3.forward,angle);// own docking point
+		
+		this.transform.rotation *= finalRotationMove;
+		this.transform.position = finalPosition;
+		*/
+	}
+	
+	
 	
 	public static Vector3 GetMousePositionAtNullPlane ()
 	{
@@ -127,8 +208,14 @@ public class BuildBlock : MonoBehaviour
 	void OnMouseDown ()
 	{
 		Ghost();
-		Transform closest = null;
+		
+		if (rigidbody != null) {
+			rigidbody.constraints = RigidbodyConstraints.FreezeAll;
+		}
+		
 		var mousePosition = GetMousePositionAtNullPlane ();
+		
+		Transform closest = null;
 		float minDistance = Mathf.Infinity;
 		foreach (Transform child in this.transform) {
 			if (child.gameObject.layer == LayerMask.NameToLayer ("Docking Point")) {
@@ -140,16 +227,22 @@ public class BuildBlock : MonoBehaviour
 		}
 		activeDockingPoint = closest;
 		activeDockingPointIdx = dockingPoints.IndexOf (activeDockingPoint);
-		//this.transform.position = this.transform.position + (mousePosition - activeDockingPoint.position);
-		offset = this.transform.position - mousePosition;
+		
+		// snap active docking point to mouseposition
+		// TODO: soft snap
+		this.transform.position = this.transform.position + (mousePosition - activeDockingPoint.position);
+		
+		offset = activeDockingPoint.position - mousePosition;
+		
     	isBuildingBlockDragMode = true;
+		
+		Debug.Log("Mouse Down");
 	}
 	
+	/*
 	void OnMouseDrag ()
 	{      
-		if (rigidbody != null) {
-			rigidbody.constraints = RigidbodyConstraints.FreezeAll;
-		}
+		
 		Vector3 mousePosition = GetMousePositionAtNullPlane ();
 		
 		//offset -= offset*Time.deltaTime; //slide to center
@@ -157,20 +250,24 @@ public class BuildBlock : MonoBehaviour
 		var move = mousePosition+offset - this.transform.position;
 
 		this.transform.position += move * Time.deltaTime*mousePullStrength;
-	
+		
 		
 		closestDockingPoint = GetClosestDockingPoint (); 
-	
 	}
+	*/
 
 	void OnMouseUp ()
 	{
 		UnGhost();
+		
 		if (rigidbody != null) {
 			rigidbody.constraints = RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezePositionZ;
 		}
+		
         activeDockingPoint = null;
 		isBuildingBlockDragMode = false;
+		
+		Debug.Log("Mouse Up");
 	}
 
 	void OnDrawGizmosSelected ()
@@ -224,47 +321,7 @@ public class BuildBlock : MonoBehaviour
 	}
 		
 	
-	private void RotateToTargetPoint(Vector3 targetPoint, ref Vector3 velocity)
-	{
-		Vector3 activeDockingPointRelativePosition = -this.transform.position + activeDockingPoint.position; // NOTE: could use local position if docking points are always direct children
-		float angle = 0;
-		if((targetPoint-activeDockingPoint.position).magnitude > 0.01f)
-		{
-			Vector3	activeDockingPointDir = Vector3.Normalize(activeDockingPointRelativePosition);
-			Vector3 targetPointDir = Vector3.Normalize(-this.transform.position + targetPoint);
-			angle = signedAngle(activeDockingPointDir,targetPointDir);
-		}
-		var finalRotationMove = Quaternion.AngleAxis(angle,Vector3.forward);
-		
-		var finalActiveDockingPointRelativePosition = finalRotationMove*activeDockingPointRelativePosition; //rotate relativeVector
-		var finalActiveDockingPointPosition = this.transform.position +finalActiveDockingPointRelativePosition; // final Position
-		
-		var finalPositionMove = targetPoint - finalActiveDockingPointPosition;
-        
-		this.transform.rotation *= Quaternion.AngleAxis(angle,Vector3.forward);
-        this.transform.position += finalPositionMove; 
-	
-		/*
-		var stepRotation = Quaternion.AngleAxis(angle*Time.deltaTime*dockingPointPullStrength,Vector3.forward);
-		var stepPosition = finalPositionMove*Time.deltaTime*dockingPointPullStrength;
-		
-		
-		this.transform.rotation *= stepRotation;
-        this.transform.position += stepPosition; 
-        */
-        //this.transform.position = Vector3.SmoothDamp(this.transform.position, targetPoint,ref velocity,0.5F);
-		
-		//offset = stepRotation * offset;
-		//offset += stepPosition;
-		
-		/*
-		//this.transform.RotateAround(targetPoint,Vector3.forward,angle);// target point
-		//this.transform.RotateAround(activeDockingPoint.position,Vector3.forward,angle);// own docking point
-		
-		this.transform.rotation *= finalRotationMove;
-		this.transform.position = finalPosition;
-		*/
-	}
+
 	
 	
 	private Transform GetClosestDockingPoint ()
