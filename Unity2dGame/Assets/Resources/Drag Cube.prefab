@@ -13,7 +13,7 @@ GameObject:
   - 23: {fileID: 2300000}
   - 54: {fileID: 5400000}
   - 114: {fileID: 11400000}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: Drag Cube
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -289,7 +289,7 @@ Rigidbody:
   m_UseGravity: 1
   m_IsKinematic: 0
   m_Interpolate: 0
-  m_Constraints: 56
+  m_Constraints: 126
   m_CollisionDetection: 0
 --- !u!65 &6500000
 BoxCollider:
@@ -313,9 +313,9 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3afa500389801314f97e6cd20bc97678, type: 1}
   m_Name: 
+  prefabName: Drag Cube
   searchRange: 2
-  mousePullStrength: 10
-  dockingPointPullStrength: 20
+  respawnTime: 1.5
   alpha: .699999988
 --- !u!135 &13500000
 SphereCollider:
