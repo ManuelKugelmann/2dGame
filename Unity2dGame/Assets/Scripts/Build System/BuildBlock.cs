@@ -4,9 +4,9 @@ using System.Collections;
 public class BuildBlock : MonoBehaviour
 {
 	//Public
+    public string prefabName;
 	public float searchRange = 2.0F;
-    public float mousePullStrength = 10F;
-    public float dockingPointPullStrength = 20F;
+    public float respawnTime =1.5F;
     public float alpha = 0.7F;
 	
 	//private
@@ -69,25 +69,42 @@ public class BuildBlock : MonoBehaviour
 	
 	
 	private ArrayList dockingPoints;
-	
+    private Vector3 startPosition;
 	private int activeDockingPointIdx = 0;
-	
+    private bool isFirstMouseDown = true;
+    private bool isGui = true;
 	//Mousebuttons
 	private static int leftButton = 0;
 	private static int rightButton = 1;
 	
 	// Use this for initialization
+    
 	void Start ()
 	{
-		dockingPoints = new ArrayList ();
+        startPosition = this.transform.position;
+        dockingPoints = new ArrayList ();
+        foreach (Transform child in this.transform)
+        {
+            if (child.gameObject.layer == LayerMask.NameToLayer("Docking Point"))
+            {
+                child.gameObject.layer = LayerMask.NameToLayer("3DGUI");
+                dockingPoints.Add(child);
+                
+            }
+        }
 		ghostShader = Shader.Find("Transparent/Diffuse");
 		normalShader = this.gameObject.renderer.material.shader;
         normalColor = this.gameObject.renderer.material.color;
 	}
-
+    
 	// Update is called once per frame
 	void Update ()
 	{
+        if(isGui)
+        {
+            GuiAnimation();
+        }
+
 		// Lock y rotation
 		// TODO: look for something more efficient
 		//var r = this.transform.rotation.eulerAngles;
@@ -141,17 +158,23 @@ public class BuildBlock : MonoBehaviour
 				var finalPositionMove = targetPoint - finalActiveDockingPointPosition;
 		        
 				this.transform.rotation *= Quaternion.AngleAxis(angle,Vector3.forward);
-		        this.transform.position += finalPositionMove; 
-						
+		        this.transform.position += finalPositionMove;
+
+              
+                this.transform.position = this.transform.position + (mousePosition - activeDockingPoint.position);
 				
-				
-				//RotateToTargetPoint(closestDockingPoint.position, ref closestDockingPointVelocity);
+                //RotateToTargetPoint(closestDockingPoint.position, ref closestDockingPointVelocity);
 			}
 		}
 	}
-	
-	
-	
+
+
+    private void GuiAnimation()
+    {
+        this.transform.Rotate(new Vector3(1,1,1) * 100 * Time.deltaTime);
+        
+    }
+
 	private void RotateToTargetPoint(Vector3 targetPoint, ref Vector3 velocity)
 	{
 		
@@ -171,28 +194,29 @@ public class BuildBlock : MonoBehaviour
 		var finalPositionMove = targetPoint - finalActiveDockingPointPosition;
         
 		this.transform.rotation *= Quaternion.AngleAxis(angle,Vector3.forward);
-        this.transform.position += finalPositionMove; 
-	
-		/*
-		var stepRotation = Quaternion.AngleAxis(angle*Time.deltaTime*dockingPointPullStrength,Vector3.forward);
-		var stepPosition = finalPositionMove*Time.deltaTime*dockingPointPullStrength;
-		
-		
-		this.transform.rotation *= stepRotation;
-        this.transform.position += stepPosition; 
-        */
+        this.transform.position += finalPositionMove;
+
+        /*
+        var stepRotation = Quaternion.AngleAxis(angle * Time.deltaTime * dockingPointPullStrength, Vector3.forward);
+        var stepPosition = finalPositionMove * Time.deltaTime * dockingPointPullStrength;
+
+
+        this.transform.rotation *= stepRotation;
+        this.transform.position += stepPosition;
+
         //this.transform.position = Vector3.SmoothDamp(this.transform.position, targetPoint,ref velocity,0.5F);
+
+        //offset = stepRotation * offset;
+        //offset += stepPosition;
+
+
+        //this.transform.RotateAround(targetPoint,Vector3.forward,angle);// target point
+        //this.transform.RotateAround(activeDockingPoint.position,Vector3.forward,angle);// own docking point
+
+        this.transform.rotation *= finalRotationMove;
+        this.transform.position = finalPositionMove;
+        */
 		
-		//offset = stepRotation * offset;
-		//offset += stepPosition;
-		
-		/*
-		//this.transform.RotateAround(targetPoint,Vector3.forward,angle);// target point
-		//this.transform.RotateAround(activeDockingPoint.position,Vector3.forward,angle);// own docking point
-		
-		this.transform.rotation *= finalRotationMove;
-		this.transform.position = finalPosition;
-		*/
 	}
 	
 	
@@ -205,10 +229,24 @@ public class BuildBlock : MonoBehaviour
 		return ray.origin + ray.direction * lambda;
 	}
 
+    IEnumerator SpawnPrefab(float waitTime)
+    {
+        yield return new WaitForSeconds(waitTime);
+        Instantiate(Resources.Load(prefabName), startPosition, Quaternion.identity);
+    }
+
 	void OnMouseDown ()
 	{
 		Ghost();
-		
+        if (isGui)
+        {
+            isGui = false;
+            this.transform.rotation = Quaternion.identity;
+            StartCoroutine(SpawnPrefab(respawnTime));
+        }
+        
+        Camera.main.cullingMask |= (1 << LayerMask.NameToLayer("Docking Point"));
+        this.gameObject.layer = LayerMask.NameToLayer("Default"); //moves object from 3DGUI layer to default layer
 		if (rigidbody != null) {
 			rigidbody.constraints = RigidbodyConstraints.FreezeAll;
 		}
@@ -217,13 +255,12 @@ public class BuildBlock : MonoBehaviour
 		
 		Transform closest = null;
 		float minDistance = Mathf.Infinity;
-		foreach (Transform child in this.transform) {
-			if (child.gameObject.layer == LayerMask.NameToLayer ("Docking Point")) {
-				dockingPoints.Add (child);
+        // get all Dockingpoints on this object
+		foreach (Transform child in dockingPoints) {
+			child.gameObject.layer = LayerMask.NameToLayer("Docking Point");
 				if (CheckDistance (mousePosition, ref minDistance, child.position)) {
 					closest = child;
-				}
-			}
+				}			
 		}
 		activeDockingPoint = closest;
 		activeDockingPointIdx = dockingPoints.IndexOf (activeDockingPoint);
@@ -259,11 +296,8 @@ public class BuildBlock : MonoBehaviour
 	void OnMouseUp ()
 	{
 		UnGhost();
-		
-		if (rigidbody != null) {
-			rigidbody.constraints = RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezePositionZ;
-		}
-		
+        Camera.main.cullingMask &= ~(1 << LayerMask.NameToLayer("Docking Point")); 
+        Destroy(this.rigidbody);
         activeDockingPoint = null;
 		isBuildingBlockDragMode = false;
 		
