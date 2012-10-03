@@ -97,7 +97,7 @@ Transform:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 1470891713}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -2.9454217, y: 2.87833285, z: -11.1713867}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
@@ -111,6 +111,12 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 374e0f4be1201ac4d8e8d1135441c9bc, type: 1}
   m_Name: 
+  worldRadius: 10
+  prefab: {fileID: 100000, guid: 6ef7b158804e63941819891e5b831a95, type: 2}
+  maxWorldBlocks: 1000
+  radiusTolerance: .400000006
+  sizeDecreaseMod: 100
+  countFailedInstantiate: 0
 --- !u!1 &1750676795
 GameObject:
   m_ObjectHideFlags: 0
