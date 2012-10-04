@@ -31,11 +31,13 @@ public class BuildBlock : MonoBehaviour
             {
                 backingfield_closestDockingPoint.gameObject.renderer.material.color = Color.red; // inactive
             }
+			
             if (backingfield_closestDockingPoint != value)
             {
                 backingfield_closestDockingPoint = value;
                 closestDockingPointVelocity = Vector3.zero;
             }
+			
             if (backingfield_closestDockingPoint != null)
             {
                 backingfield_closestDockingPoint.gameObject.renderer.material.color = Color.yellow; // active
@@ -111,9 +113,10 @@ public class BuildBlock : MonoBehaviour
 		//r.y = 0;
 		//this.transform.rotation = Quaternion.Euler(r);
 		
-		if (isBuildingBlockDragMode) {
+		if (isBuildingBlockDragMode) 
+		{
 
-			var mousePosition = GetMousePositionAtNullPlane ();
+			var mousePosition = MousePointer.GetPositionAtNullPlane();
 			
 			/*
 			if(Input.GetMouseButtonDown (rightButton) && dockingPoints.Count > 0) { // when righclicked
@@ -131,25 +134,29 @@ public class BuildBlock : MonoBehaviour
 			*/
 					
 			closestDockingPoint = GetClosestDockingPoint ();
-			
-			if(closestDockingPoint == null) {
+			/*
+			if(closestDockingPoint == null) 
+			{
 				
-				this.transform.position = this.transform.position + (mousePosition + offset - activeDockingPoint.position);
+				this.transform.position = this.transform.position + (mousePosition+offset - activeDockingPoint.position);
 				
 			}
-			else {
+			else
+			{
 				
 				var targetPoint = closestDockingPoint.position;
 				
 						
 				Vector3 activeDockingPointRelativePosition = -this.transform.position + activeDockingPoint.position; // NOTE: could use local position if docking points are always direct children
 				float angle = 0;
+				
 				if((targetPoint-activeDockingPoint.position).magnitude > 0.01f)
 				{
 					Vector3	activeDockingPointDir = Vector3.Normalize(activeDockingPointRelativePosition);
 					Vector3 targetPointDir = Vector3.Normalize(-this.transform.position + targetPoint);
 					angle = signedAngle(activeDockingPointDir,targetPointDir);
 				}
+				
 				var finalRotationMove = Quaternion.AngleAxis(angle,Vector3.forward);
 				
 				var finalActiveDockingPointRelativePosition = finalRotationMove*activeDockingPointRelativePosition; //rotate relativeVector
@@ -159,21 +166,18 @@ public class BuildBlock : MonoBehaviour
 		        
 				this.transform.rotation *= Quaternion.AngleAxis(angle,Vector3.forward);
 		        this.transform.position += finalPositionMove;
-
+				
+				offset = finalRotationMove * offset;
               
-                this.transform.position = this.transform.position + (mousePosition - activeDockingPoint.position);
+                this.transform.position = this.transform.position + (mousePosition+offset - activeDockingPoint.position);
 				
                 //RotateToTargetPoint(closestDockingPoint.position, ref closestDockingPointVelocity);
 			}
+			*/
 		}
 	}
 
 
-    private void GuiAnimation()
-    {
-        this.transform.Rotate(new Vector3(1,1,1) * 100 * Time.deltaTime);
-        
-    }
 
 	private void RotateToTargetPoint(Vector3 targetPoint, ref Vector3 velocity)
 	{
@@ -221,60 +225,88 @@ public class BuildBlock : MonoBehaviour
 	
 	
 	
-	public static Vector3 GetMousePositionAtNullPlane ()
-	{
-		Ray ray = Camera.main.ScreenPointToRay (Input.mousePosition);
-		float lambda = -ray.origin.z / ray.direction.z;
-		Debug.DrawRay (ray.origin, ray.direction * lambda, Color.yellow);
-		return ray.origin + ray.direction * lambda;
-	}
-
-    IEnumerator SpawnPrefab(float waitTime)
-    {
-        yield return new WaitForSeconds(waitTime);
-        Instantiate(Resources.Load(prefabName), startPosition, Quaternion.identity);
-    }
 
 	void OnMouseDown ()
 	{
+		Debug.Log("Mouse Down");
+		isBuildingBlockDragMode = true;
+		
 		Ghost();
+		
+		
+		var mousePosition = MousePointer.GetPositionAtNullPlane();
+		
         if (isGui)
         {
             isGui = false;
+			gameObject.name = prefabName;
             this.transform.rotation = Quaternion.identity;
+			this.transform.position = mousePosition;
+			
             StartCoroutine(SpawnPrefab(respawnTime));
         }
         
         Camera.main.cullingMask |= (1 << LayerMask.NameToLayer("Docking Point"));
         this.gameObject.layer = LayerMask.NameToLayer("Default"); //moves object from 3DGUI layer to default layer
-		if (rigidbody != null) {
-			rigidbody.constraints = RigidbodyConstraints.FreezeAll;
+		
+		
+		if (rigidbody != null) 
+		{
+			//rigidbody.constraints = RigidbodyConstraints.FreezeAll;
+			rigidbody.constraints = RigidbodyConstraints.FreezePositionZ | RigidbodyConstraints.FreezeRotationY;
 		}
 		
-		var mousePosition = GetMousePositionAtNullPlane ();
 		
 		Transform closest = null;
 		float minDistance = Mathf.Infinity;
         // get all Dockingpoints on this object
-		foreach (Transform child in dockingPoints) {
+		foreach (Transform child in dockingPoints) 
+		{
 			child.gameObject.layer = LayerMask.NameToLayer("Docking Point");
-				if (CheckDistance (mousePosition, ref minDistance, child.position)) {
-					closest = child;
-				}			
+			if (CheckDistance (mousePosition, ref minDistance, child.position))
+			{
+				closest = child;
+			}			
 		}
 		activeDockingPoint = closest;
 		activeDockingPointIdx = dockingPoints.IndexOf (activeDockingPoint);
 		
 		// snap active docking point to mouseposition
+		//this.transform.position = this.transform.position + (mousePosition - activeDockingPoint.position);
 		// TODO: soft snap
-		this.transform.position = this.transform.position + (mousePosition - activeDockingPoint.position);
 		
 		offset = activeDockingPoint.position - mousePosition;
 		
-    	isBuildingBlockDragMode = true;
+		joint = MousePointer.I.GetComponent<ConfigurableJoint>();//   .gameObject.AddComponent<ConfigurableJoint>();
 		
-		Debug.Log("Mouse Down");
+		/*
+		//joint.anchor = activeDockingPoint.position;
+		joint.anchor = new Vector3(0, 0, 0);
+		//joint.anchor = this.transform.position;
+		
+		joint.xMotion = ConfigurableJointMotion.Locked;
+		joint.yMotion = ConfigurableJointMotion.Locked;
+		joint.zMotion = ConfigurableJointMotion.Locked;
+		
+	//	var limit = new SoftJointLimit();
+	//	limit.limit = 0.5f;
+	//	joint.linearLimit = limit;
+		
+		joint.angularXMotion = ConfigurableJointMotion.Locked;
+		joint.angularYMotion = ConfigurableJointMotion.Locked;
+		joint.angularZMotion = ConfigurableJointMotion.Locked;
+		*/
+		
+		
+		//joint.targetPosition = -mousePosition+this.transform.position;
+		joint.targetPosition = new Vector3(0, 0, 0);
+		
+		joint.connectedBody = this.rigidbody;
+		
+		
 	}
+	
+	ConfigurableJoint joint;
 	
 	/*
 	void OnMouseDrag ()
@@ -295,14 +327,40 @@ public class BuildBlock : MonoBehaviour
 
 	void OnMouseUp ()
 	{
+		//Destroy(joint);
+		//joint = null;
+		joint.connectedBody = null;
+		
+		//Destroy(this.rigidbody);
+		
 		UnGhost();
         Camera.main.cullingMask &= ~(1 << LayerMask.NameToLayer("Docking Point")); 
-        Destroy(this.rigidbody);
-        activeDockingPoint = null;
+        
+		
+        
+		activeDockingPoint = null;
 		isBuildingBlockDragMode = false;
 		
 		Debug.Log("Mouse Up");
 	}
+	
+	
+
+	
+    private void GuiAnimation()
+    {
+        this.transform.Rotate(new Vector3(1,1,1) * 100 * Time.deltaTime);
+        
+    }
+	
+    IEnumerator SpawnPrefab(float waitTime)
+    {
+        yield return new WaitForSeconds(waitTime);
+        var go = (GameObject)Instantiate(Resources.Load(prefabName), startPosition, Quaternion.identity);
+		go.name = prefabName + " GUI";
+    }
+
+	
 
 	void OnDrawGizmosSelected ()
 	{
