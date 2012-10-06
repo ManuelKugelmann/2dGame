@@ -28,7 +28,7 @@ public class BuildBlock_SnapDrag : BuildBlockBase
 			var targetRotation =  diffRotation * Quaternion.AngleAxis(180,Vector3.forward);
 			
 			
-			var activeDockingPointRelativePosition = activeDockingPoint.position;
+			var activeDockingPointRelativePosition = activeDockingPoint.localPosition;
 			activeDockingPointRelativePosition.Scale(this.transform.localScale);
 			
 			this.transform.rotation = targetRotation;
