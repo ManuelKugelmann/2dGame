@@ -13,7 +13,7 @@ public class BuildBlock_SnapDrag : BuildBlockBase
 	
 	override protected void OnDragging()
 	{
-		if(closestDockingPoint == null) 
+		if(closestDockingPoint == null || (MousePointer.position+offset - activeDockingPoint.position).magnitude > 6 ) 
 		{
 			
 			this.transform.position = this.transform.position + (MousePointer.position+offset - activeDockingPoint.position);
@@ -23,8 +23,14 @@ public class BuildBlock_SnapDrag : BuildBlockBase
 		{
 			
 			var targetPoint = closestDockingPoint.position;
-			var targetRotation = closestDockingPoint.rotation;
-					
+			
+			var diffRotation = closestDockingPoint.rotation * Quaternion.Inverse(activeDockingPoint.localRotation);
+			var targetRotation =  diffRotation * Quaternion.AngleAxis(180,Vector3.forward);
+			
+			this.transform.rotation = targetRotation;
+			this.transform.position = targetPoint - (targetRotation*(activeDockingPoint.position*this.transform.localScale));
+			
+			/*
 			Vector3 activeDockingPointRelativePosition = -this.transform.position + activeDockingPoint.position; // NOTE: could use local position if docking points are always direct children
 			float angle = 0;
 			
@@ -50,6 +56,7 @@ public class BuildBlock_SnapDrag : BuildBlockBase
             this.transform.position = this.transform.position + (MousePointer.position+offset - activeDockingPoint.position);
 			
             //RotateToTargetPoint(closestDockingPoint.position, ref closestDockingPointVelocity);
+            */
 		}
 		
 	}
