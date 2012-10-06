@@ -27,8 +27,12 @@ public class BuildBlock_SnapDrag : BuildBlockBase
 			var diffRotation = closestDockingPoint.rotation * Quaternion.Inverse(activeDockingPoint.localRotation);
 			var targetRotation =  diffRotation * Quaternion.AngleAxis(180,Vector3.forward);
 			
+			
+			var activeDockingPointRelativePosition = activeDockingPoint.position;
+			activeDockingPointRelativePosition.Scale(this.transform.localScale);
+			
 			this.transform.rotation = targetRotation;
-			this.transform.position = targetPoint - (targetRotation*(activeDockingPoint.position*this.transform.localScale));
+			this.transform.position = targetPoint - (targetRotation*activeDockingPointRelativePosition);
 			
 			/*
 			Vector3 activeDockingPointRelativePosition = -this.transform.position + activeDockingPoint.position; // NOTE: could use local position if docking points are always direct children
